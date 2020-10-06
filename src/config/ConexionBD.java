@@ -2,9 +2,14 @@ package config;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -12,6 +17,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Scanner;
+import java.util.stream.Collectors;
 
 import controller.VuelosController;
 import models.Vuelos;
@@ -53,6 +59,8 @@ public class ConexionBD {
 
 	public static void main(String[] args) {
 
+		System.out.println("Selecciona BD o Fichero");
+
 		VuelosController lista = new VuelosController();
 
 		System.out.println("Seleccione el método a ejecutar");
@@ -64,6 +72,10 @@ public class ConexionBD {
 		System.out.println("6- Leer fichero");
 		System.out.println("7- Exportar BD a Fichero");
 		System.out.println("8- Exportar de fichero a BD");
+		System.out.println("9- Insertar Valores Fichero");
+		System.out.println("10- Editar Valores Fichero");
+		System.out.println("11- Eliminar Valores Fichero");
+		System.out.println("12- Buscar Vuelo en Fichero");
 
 		System.out.println("Entre el Número de Método a Ejecutar");
 		Scanner scan = new Scanner(System.in);
@@ -107,6 +119,22 @@ public class ConexionBD {
 		}
 		case 8: {
 			ConexionBD.fichero_a_bd();
+			break;
+		}
+		case 9: {
+			ConexionBD.insertar_valores_fichero();
+			break;
+		}
+		case 10: {
+			ConexionBD.editar_vuelo_fichero();
+			break;
+		}
+		case 11: {
+			ConexionBD.eliminar_vuelo_fichero();
+			break;
+		}
+		case 12: {
+			ConexionBD.buscar_vuelo_fichero();
 			break;
 		}
 		default:
@@ -350,22 +378,22 @@ public class ConexionBD {
 			try {
 				if (null != fichero)
 					fichero.close();
-					System.out.println("Base de datos exportada correctamente");
+				System.out.println("Base de datos exportada correctamente");
 			} catch (Exception e2) {
 				e2.printStackTrace();
 			}
 		}
 
 	}
-	
-	public static void fichero_a_bd(){
-		
+
+	public static void fichero_a_bd() {
+
 		File archivo = null;
 		FileReader fr = null;
 		BufferedReader br = null;
-		
-		ArrayList<String> lista_vuelos_fichero  = new ArrayList();
-		
+
+		ArrayList<String> lista_vuelos_fichero = new ArrayList();
+
 		try {
 			archivo = new File("./src/archivo.txt");
 			fr = new FileReader(archivo);
@@ -385,22 +413,265 @@ public class ConexionBD {
 				e2.printStackTrace();
 			}
 		}
-		
-		for(int i = 0; i < lista_vuelos_fichero.size(); i++) {
-			
+
+		for (int i = 0; i < lista_vuelos_fichero.size(); i++) {
+
 			String[] parts = lista_vuelos_fichero.get(i).split("/");
-			String id_vuelo = parts[0]; //id
-			String codigo_vuelo = parts[1]; //cod_vuelo
-			String origen_vuelo = parts[2]; //origen
-			String destino_vuelo = parts[3]; //destino
-			String fecha_vuelo = parts[4]; //fecha
-			int plazas_totales = Integer.parseInt(parts[5]); //plazas totales
+			String id_vuelo = parts[0]; // id
+			String codigo_vuelo = parts[1]; // cod_vuelo
+			String origen_vuelo = parts[2]; // origen
+			String destino_vuelo = parts[3]; // destino
+			String fecha_vuelo = parts[4]; // fecha
+			int plazas_totales = Integer.parseInt(parts[5]); // plazas totales
 			int plazas_disponibles = Integer.parseInt(parts[6]); // plazas disponibles
-			
+
 			VuelosController insertarVuelo = new VuelosController();
-			insertarVuelo.insertar_vuelo(codigo_vuelo, origen_vuelo, destino_vuelo, fecha_vuelo, plazas_totales, plazas_disponibles);
-			
+			insertarVuelo.insertar_vuelo(codigo_vuelo, origen_vuelo, destino_vuelo, fecha_vuelo, plazas_totales,
+					plazas_disponibles);
+
 		}
 		System.out.println("Nuevos vuelos insertados en la BD");
 	}
+
+	public static void insertar_valores_fichero() {
+
+		VuelosController lista = new VuelosController();
+
+		String cod_vuelo = "";
+		String org_vuelo = "";
+		String des_vuelo = "";
+		String fec_vuelo = "";
+		int pzt_vuelo = 0;
+		int pzd_vuelo = 0;
+
+		System.out.println("Entre el Código del Vuelo");
+		Scanner scanner = new Scanner(System.in);
+
+		cod_vuelo = scanner.nextLine();
+
+		if (cod_vuelo.length() == 5) {
+
+			List<Vuelos> lista_tamano = lista.info_vuelo(cod_vuelo);
+
+			if (lista_tamano.size() == 0) {
+
+				System.out.println("Entre el Origen del Vuelo");
+
+				org_vuelo = scanner.nextLine();
+
+				System.out.println("Entre el Destino del Vuelo");
+				des_vuelo = scanner.nextLine();
+
+				System.out.println("Entre la Fecha del Vuelo");
+
+				fec_vuelo = scanner.nextLine();
+
+				System.out.println("Entre la cantidad de plazas totales del Vuelo");
+				String next_scan_plazas_totales = scanner.next();
+				int plazas_totales = Integer.parseInt(next_scan_plazas_totales);
+				pzt_vuelo = plazas_totales;
+
+				System.out.println("Entre la cantidad de plazas disponibles del Vuelo");
+				String next_scan_plazas_disponibles = scanner.next();
+				int plazas_disponibles = Integer.parseInt(next_scan_plazas_disponibles);
+				pzd_vuelo = plazas_disponibles;
+
+				FileWriter fichero = null;
+				PrintWriter pw = null;
+
+				try {
+					fichero = new FileWriter("./src/archivo.txt", true);
+					pw = new PrintWriter(fichero);
+
+					BufferedReader input = new BufferedReader(new FileReader("./src/archivo.txt"));
+					String last = "";
+					String line = "";
+
+					while ((line = input.readLine()) != null) {
+						last = line;
+					}
+
+					String[] parts = last.split("/");
+
+					int id_vuelo = 1;
+
+					if (parts[0] != "") {
+						id_vuelo = Integer.parseInt(parts[0]) + 1;
+					}
+
+					pw.println(id_vuelo + "/" + cod_vuelo + "/" + org_vuelo + "/" + des_vuelo + "/" + fec_vuelo + "/"
+							+ pzt_vuelo + "/" + pzd_vuelo);
+
+					System.out.println("Vuelo insertado correctamente");
+
+				} catch (Exception e) {
+					e.printStackTrace();
+				} finally {
+					try {
+						if (null != fichero)
+							fichero.close();
+						System.out.println("Base de datos exportada correctamente");
+					} catch (Exception e2) {
+						e2.printStackTrace();
+					}
+				}
+
+			} else {
+				System.out.println(
+						"El vuelo ya existe, no se puede crear un vuelo con el mismo código. Revise sus datos por favor !!!");
+			}
+		} else {
+			System.out.println("El código de vuelo debe de tener 5 Caracteres obligatoriamente !!!");
+		}
+
+	}
+	
+	public static void insertar_valores_fichero_id(String id) {
+
+		VuelosController lista = new VuelosController();
+
+		String cod_vuelo = "";
+		String org_vuelo = "";
+		String des_vuelo = "";
+		String fec_vuelo = "";
+		int pzt_vuelo = 0;
+		int pzd_vuelo = 0;
+
+		System.out.println("Entre el Código del Vuelo");
+		Scanner scanner = new Scanner(System.in);
+
+		cod_vuelo = scanner.nextLine();
+
+		if (cod_vuelo.length() == 5) {
+
+			List<Vuelos> lista_tamano = lista.info_vuelo(cod_vuelo);
+
+			if (lista_tamano.size() == 0) {
+
+				System.out.println("Entre el Origen del Vuelo");
+
+				org_vuelo = scanner.nextLine();
+
+				System.out.println("Entre el Destino del Vuelo");
+				des_vuelo = scanner.nextLine();
+
+				System.out.println("Entre la Fecha del Vuelo");
+
+				fec_vuelo = scanner.nextLine();
+
+				System.out.println("Entre la cantidad de plazas totales del Vuelo");
+				String next_scan_plazas_totales = scanner.next();
+				int plazas_totales = Integer.parseInt(next_scan_plazas_totales);
+				pzt_vuelo = plazas_totales;
+
+				System.out.println("Entre la cantidad de plazas disponibles del Vuelo");
+				String next_scan_plazas_disponibles = scanner.next();
+				int plazas_disponibles = Integer.parseInt(next_scan_plazas_disponibles);
+				pzd_vuelo = plazas_disponibles;
+
+				FileWriter fichero = null;
+				PrintWriter pw = null;
+
+				try {
+					fichero = new FileWriter("./src/archivo.txt", true);
+					pw = new PrintWriter(fichero);
+
+					pw.println(id + "/" + cod_vuelo + "/" + org_vuelo + "/" + des_vuelo + "/" + fec_vuelo + "/"
+							+ pzt_vuelo + "/" + pzd_vuelo);
+
+					System.out.println("Vuelo insertado correctamente");
+
+				} catch (Exception e) {
+					e.printStackTrace();
+				} finally {
+					try {
+						if (null != fichero)
+							fichero.close();
+						System.out.println("Base de datos exportada correctamente");
+					} catch (Exception e2) {
+						e2.printStackTrace();
+					}
+				}
+
+			} else {
+				System.out.println(
+						"El vuelo ya existe, no se puede crear un vuelo con el mismo código. Revise sus datos por favor !!!");
+			}
+		} else {
+			System.out.println("El código de vuelo debe de tener 5 Caracteres obligatoriamente !!!");
+		}
+
+	}
+
+	public static void editar_vuelo_fichero() {
+
+		System.out.println("Entre el ID del Vuelo");
+		Scanner scanner = new Scanner(System.in);
+		int id_vuelo = Integer.parseInt(scanner.nextLine());
+
+		String rutaAlFichero = "./src/archivo.txt";
+		String cadena = id_vuelo+"/";
+		
+		Path path = Paths.get(rutaAlFichero);
+
+		try {
+
+			List<String> lineas = Files.readAllLines(path);
+			lineas = lineas.stream().filter(linea -> !linea.contains(cadena)).collect(Collectors.toList());
+			Files.write(path, lineas);
+			
+			insertar_valores_fichero_id(cadena);
+
+		} catch (Exception e) {
+			// TODO: handle exception
+		}
+	}
+
+	public static void eliminar_vuelo_fichero() {
+		
+		System.out.println("Entre el ID del Vuelo");
+		Scanner scanner = new Scanner(System.in);
+		int id_vuelo = Integer.parseInt(scanner.nextLine());
+		
+		String rutaAlFichero = "./src/archivo.txt";
+		String cadena = id_vuelo+"/";
+		
+		Path path = Paths.get(rutaAlFichero);
+
+		try {
+
+			List<String> lineas = Files.readAllLines(path);
+			lineas = lineas.stream().filter(linea -> !linea.contains(cadena)).collect(Collectors.toList());
+			Files.write(path, lineas);
+			
+			System.out.println("Vuelo de ID: "+id_vuelo+ " ha sido eliminado");
+
+		} catch (Exception e) {
+			// TODO: handle exception
+		}
+
+	}
+	
+	public static void buscar_vuelo_fichero() {
+		System.out.println("Entre el ID del Vuelo");
+		Scanner scanner = new Scanner(System.in);
+		int id_vuelo = Integer.parseInt(scanner.nextLine());
+		
+		String rutaAlFichero = "./src/archivo.txt";
+		String cadena = id_vuelo+"/";
+		
+		Path path = Paths.get(rutaAlFichero);
+
+		try {
+
+			List<String> lineas = Files.readAllLines(path);
+			lineas = lineas.stream().filter(linea -> linea.contains(cadena)).collect(Collectors.toList());
+						
+			System.out.println("El vuelo buscado es : "+lineas);
+
+		} catch (Exception e) {
+			// TODO: handle exception
+		}
+	}
+
 }
